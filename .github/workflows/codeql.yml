@@ -17,22 +17,29 @@ jobs:
       contents: read
       security-events: write
 
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'javascript', 'python' ]
-
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Check for code files
+      id: check_files
+      run: |
+        # Check if there are any code files to analyze
+        if find . -type f \( -name "*.js" -o -name "*.ts" -o -name "*.py" -o -name "*.go" -o -name "*.java" \) ! -path "./.git/*" | grep -q .; then
+          echo "has_code=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_code=false" >> $GITHUB_OUTPUT
+          echo "No code files found to analyze. Skipping CodeQL."
+        fi
+
     - name: Initialize CodeQL
+      if: steps.check_files.outputs.has_code == 'true'
       uses: github/codeql-action/init@v2
-      with:
-        languages: ${{ matrix.language }}
 
     - name: Autobuild
+      if: steps.check_files.outputs.has_code == 'true'
       uses: github/codeql-action/autobuild@v2
 
     - name: Perform CodeQL Analysis
+      if: steps.check_files.outputs.has_code == 'true'
       uses: github/codeql-action/analyze@v2
